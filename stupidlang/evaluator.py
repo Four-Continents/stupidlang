@@ -6,6 +6,7 @@ def global_env(envclass):
     "An environment with some Scheme standard procedures."
     env = envclass.empty()
     env.extend_many(vars(math))
+    # appends a few more operators
     env.extend_many({
         '+':op.add, '-':op.sub, '*':op.mul, '/':op.truediv,
         'abs':     abs,
@@ -26,13 +27,16 @@ class Function():
 
     def __call__(self, *args):
         funcenv = self.envclass(outerenv = self.env)
+        # loads function arguments into the environment
         funcenv.extend_many(zip(self.params, args))
         return eval_ptree(self.code, funcenv)
 
 def eval_ptree(x, env):
     fmap={'#t':True, '#f':False, 'nil':None}
+    # handles booleans
     if x in ('#t', '#f', 'nil'):
         return fmap[x]
+    # handles symbols
     elif isinstance(x, Symbol):
         # variable lookup
         return env.lookup(x)[0]
@@ -40,6 +44,7 @@ def eval_ptree(x, env):
         return x
     elif len(x)==0: #noop
         return None
+    # handles conditionals (specifically if)
     elif x[0]=='if':
         (_, predicate, truexpr, falseexpr) = x
         if eval_ptree(predicate, env):
@@ -55,6 +60,7 @@ def eval_ptree(x, env):
     elif x[0] == 'store':           # (set! var exp)
         (_, var, exp) = x
         env.lookup(var)[1].extend(var, eval_ptree(exp, env))
+    # handles function definitions
     elif x[0] == 'func':
         (_, parameters, parsedbody) = x
         return Function(parameters, parsedbody, env)
